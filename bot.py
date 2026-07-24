@@ -352,6 +352,12 @@ async def setname(ctx, old_name, new_name):
   await ctx.send(embed=embed)
 
 
+# --- teto ---
+@bot.command()
+async def teto(ctx):
+  file_gif = discord.File("Kasane Teto GIF.gif")
+  await ctx.send("Teto beo vcl", file=file_gif)
+
 # --- ERROR HANDLING ---
 
 
