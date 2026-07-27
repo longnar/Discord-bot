@@ -171,7 +171,7 @@ async def importelo(ctx):
   for row in reader:
     winner = row["winner"].strip()
     loser = row["loser"].strip()
-    score = float(row["score"])  # hoặc int(row["score"]) tùy logic elo của bạn
+    score = row["score"].strip()  # hoặc int(row["score"]) tùy logic elo của bạn
 
     for player in [winner, loser]:
       cur.execute(
@@ -357,6 +357,12 @@ async def setname(ctx, old_name, new_name):
 async def teto(ctx):
   file_gif = discord.File("Kasane Teto GIF.gif")
   await ctx.send("Teto beo vcl", file=file_gif)
+
+# --- migu ---
+@bot.command()
+async def migu(ctx):
+  file_gif = discord.File("migu.gif")
+  await ctx.send("Vc Migu là sao??:wilted_rose: ", file=file_gif)
 
 # --- ERROR HANDLING ---
 
