@@ -1,10 +1,15 @@
 ﻿import csv
 from datetime import datetime, timedelta
+from enum import member
 import io
+from random import random
 from database import connect, create_tables
 import discord
 from discord.ext import commands
 from elo import calculate
+from discord import app_commands
+from typing import List
+import os
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -12,18 +17,66 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+async def setup_hook():
+  # Tải file help.py từ thư mục cogs
+  await bot.load_extension("cogs.help")
+  print("📦 Đã tải thành công Cog: Help")
+  await bot.load_extension("cogs.welcome")
+  # Đồng bộ lệnh Slash lên Discord (Nếu test thì để guild=MY_GUILD như bài trước)
+  await bot.tree.sync()
+  print("✅ Đã đồng bộ Slash Commands!")
+
+
+# Gắn setup_hook vào bot
+bot.setup_hook = setup_hook
+
 
 @bot.event
 async def on_ready():
-  create_tables()
-  print("Bot đã chạy!")
+  print(f"Bot {bot.user} đã sẵn sàng!")
 
+
+#--- DATABASE AUTOCOMMPLETE ---
+async def player_name_autocomplete(
+    interaction: discord.Interaction, current: str
+) -> List[app_commands.Choice[str]]:
+  db = connect()
+  cur = db.cursor()
+
+  # 'current' chính là những chữ cái mà người dùng đang gõ dở trong khung chat
+  if current:
+    # Nếu người dùng đang gõ chữ -> Tìm các tên có chứa chữ cái đó (không phân biệt hoa/thường)
+    # LIMIT 25 là bắt buộc để không vi phạm luật của Discord
+    cur.execute(
+        """
+            SELECT name FROM players 
+            WHERE name LIKE ? 
+            ORDER BY elo DESC 
+            LIMIT 25
+            """,
+        (f"%{current}%",),
+    )
+  else:
+    # Nếu người dùng chưa gõ chữ nào (chỉ mới bấm vào lệnh /elo) -> Gợi ý ngay Top 25 người Elo cao nhất
+    cur.execute("""
+            SELECT name FROM players 
+            ORDER BY elo DESC 
+            LIMIT 25
+            """)
+
+  players = cur.fetchall()
+  db.close()
+
+  # Biến đổi dữ liệu từ SQLite thành định dạng Choice của Discord
+  # name: Chữ hiển thị trên menu gợi ý | value: Giá trị thực sự gửi cho bot khi bấm chọn
+  return [app_commands.Choice(name=row[0], value=row[0]) for row in players]
 
 # --- ELO COMMANDS ---
 
 
-@bot.command()
-async def elo(ctx, *, player_name=None):
+@bot.tree.command(name="elo", description="Xem Elo của người chơi hoặc bảng xếp hạng")
+@app_commands.autocomplete(player_name=player_name_autocomplete)
+async def elo(interaction: discord.Interaction, player_name: str = None):
   db = connect()
   cur = db.cursor()
 
@@ -39,14 +92,14 @@ async def elo(ctx, *, player_name=None):
     player = cur.fetchone()
 
     if not player:
-      await ctx.send("Không tìm thấy người chơi")
+      await interaction.response.send_message("Không tìm thấy người chơi")
       db.close()
       return
 
     name, elo_val, wins, losses = player
 
     if wins + losses == 0:
-      await ctx.send(f"{name} chưa đánh mà đòi có Elo à :v")
+      await interaction.response.send_message(f"{name} chưa đánh mà đòi có Elo à :v")
       db.close()
       return
 
@@ -55,7 +108,7 @@ async def elo(ctx, *, player_name=None):
     embed.add_field(name="💎 Elo", value=round(elo_val), inline=True)
     embed.add_field(name="⚔ W-L", value=f"{wins}W • {losses}L", inline=True)
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
     db.close()
     return
 
@@ -69,7 +122,7 @@ async def elo(ctx, *, player_name=None):
   players = cur.fetchall()
 
   if not players:
-    await ctx.send("Chưa có dữ liệu")
+    await interaction.response.send_message("Chưa có dữ liệu")
     db.close()
     return
 
@@ -91,17 +144,17 @@ async def elo(ctx, *, player_name=None):
     )
 
   embed.description = text
-  await ctx.send(embed=embed)
+  await interaction.response.send_message(embed=embed)
   db.close()
 
 
 # --- PROFILE COMMAND ---
 
 
-@bot.command()
-async def profile(ctx, *, player_name=None):
+@bot.tree.command(name="profile", description="Xem thông tin chi tiết của người chơi")
+async def profile(interaction: discord.Interaction, player_name: str = None):
   if player_name is None:
-    player_name = ctx.author.name
+    player_name = interaction.user.name
 
   db = connect()
   cur = db.cursor()
@@ -117,7 +170,7 @@ async def profile(ctx, *, player_name=None):
   player = cur.fetchone()
 
   if not player:
-    await ctx.send("Không tìm thấy người chơi")
+    await interaction.response.send_message("Không tìm thấy người chơi")
     db.close()
     return
 
@@ -143,7 +196,7 @@ async def profile(ctx, *, player_name=None):
   embed.add_field(name="🔥 Chuỗi Thắng", value=streak, inline=True)
   embed.add_field(name="⭐ Chuỗi Thắng Cao Nhất", value=best, inline=True)
 
-  await ctx.send(embed=embed)
+  await interaction.response.send_message(embed=embed)
   db.close()
 
 
@@ -274,8 +327,8 @@ async def resetelo(ctx):
 # --- SET NAME ---
 
 
-@bot.command()
-async def setname(ctx, old_name, new_name):
+@bot.tree.command(name="setname", description="Đổi tên người chơi")
+async def setname(interaction: discord.Interaction, old_name: str, new_name: str):
   db = connect()
   cur = db.cursor()
 
@@ -290,7 +343,7 @@ async def setname(ctx, old_name, new_name):
   player = cur.fetchone()
 
   if not player:
-    await ctx.send("❌ Không tìm thấy người chơi.")
+    await interaction.response.send_message("❌ Không tìm thấy người chơi.")
     db.close()
     return
 
@@ -303,7 +356,7 @@ async def setname(ctx, old_name, new_name):
       (new_name,),
   )
   if cur.fetchone():
-    await ctx.send("❌ Tên này đã tồn tại.")
+    await interaction.response.send_message("❌ Tên này đã tồn tại.")
     db.close()
     return
 
@@ -315,7 +368,7 @@ async def setname(ctx, old_name, new_name):
 
     if datetime.now() < next_change:
       remain = (next_change - datetime.now()).days
-      await ctx.send(f"⏳ Bạn phải chờ **{remain} ngày** nữa mới đổi tên được.")
+      await interaction.response.send_message(f"⏳ Bạn phải chờ **{remain} ngày** nữa mới đổi tên được.")
       db.close()
       return
 
@@ -349,23 +402,62 @@ async def setname(ctx, old_name, new_name):
   embed.add_field(name="Tên cũ", value=old_name, inline=True)
   embed.add_field(name="Tên mới", value=new_name, inline=True)
 
-  await ctx.send(embed=embed)
+  await interaction.response.send_message(embed=embed)
 
 
 # --- teto ---
-@bot.command()
-async def teto(ctx):
+@bot.tree.command(name="teto", description="Gửi GIF Kasane Teto")
+async def teto(interaction: discord.Interaction):
   file_gif = discord.File("Kasane Teto GIF.gif")
-  await ctx.send("Teto beo vcl", file=file_gif)
+  await interaction.response.send_message("Teto beo vcl", file=file_gif)
 
 # --- migu ---
-@bot.command()
-async def migu(ctx):
+@bot.tree.command(name="migu", description="Gửi GIF Migu")
+async def migu(interaction: discord.Interaction):
   file_gif = discord.File("migu.gif")
-  await ctx.send("Vc Migu là sao??:wilted_rose: ", file=file_gif)
+  await interaction.response.send_message("Vc Migu là sao??:wilted_rose: ", file=file_gif)
+
+# --- Gambling? ---
+# @bot.tree.command(name="gamble", description="Làm tí may rủi?")
+# async def gamble(interaction: discord.Interaction):
+#   folder_path = "images"  # Tên folder chứa ảnh của bạn
+
+#   # 1. Kiểm tra xem folder có tồn tại không
+#   if not os.path.exists(folder_path):
+#     await interaction.response.send_message(
+#         "❌ Lỗi: Không tìm thấy thư mục `images`!", ephemeral=True
+#     )
+#     return
+
+#   # 2. Lấy toàn bộ danh sách file trong folder (lọc bỏ các file rác không phải là ảnh)
+#   valid_extensions = (".png", ".jpg", ".jpeg", ".gif")
+#   all_images = [
+#       file
+#       for file in os.listdir(folder_path)
+#       if file.lower().endswith(valid_extensions)
+#   ]
+
+#   # 3. Kiểm tra xem trong folder có ảnh nào không
+#   if not all_images:
+#     await interaction.response.send_message(
+#         "❌ Thư mục `images` hiện đang trống, chưa có ảnh nào!", ephemeral=True
+#     )
+#     return
+
+#   # 4. Chọn ngẫu nhiên 1 tên file ảnh từ danh sách
+#   random_image = random.choice(all_images)
+#   file_path = os.path.join(
+#       folder_path, random_image
+#   )  # Tạo đường dẫn (ví dụ: images/meme.png)
+
+#   # 5. Gói file và gửi lên Discord
+#   image_file = discord.File(file_path, filename=random_image)
+
+#   await interaction.response.send_message(
+#       content=f"🎲 Bạn đã quay được bức ảnh: **{random_image}**", file=image_file
+#   )
 
 # --- ERROR HANDLING ---
-
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -375,3 +467,4 @@ async def on_command_error(ctx, error):
 #token
 
 bot.run("REDACTED_DISCORD_TOKEN")
+
