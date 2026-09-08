@@ -10,9 +10,11 @@ from elo import calculate
 from discord import app_commands
 from typing import List
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 
 intents = discord.Intents.default()
@@ -128,9 +130,6 @@ async def on_command_error(ctx, error):
   if isinstance(error, commands.CommandNotFound):
     return
   raise error
-token = os.getenv("DISCORD_TOKEN")
-if not token:
-    raise ValueError("Thiếu DISCORD_TOKEN trong file .env!")
-
+token = os.getenv("DISCORD_TOKEN") or "REDACTED_DISCORD_TOKEN"
 bot.run(token)
 
