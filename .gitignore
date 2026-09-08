@@ -1,14 +1,3 @@
-# Databases & Local Data (DO NOT COMMIT)
-*.db
-*.sqlite
-*.sqlite3
-database.db
-wiki.db
-result.csv
-elo_backup_*.json
-elo_players_*.csv
-elo_matches_*.csv
-
 # Secrets & Environment variables
 .env
 .env.local
