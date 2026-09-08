@@ -1,0 +1,30 @@
+# Databases & Local Data (DO NOT COMMIT)
+*.db
+*.sqlite
+*.sqlite3
+database.db
+wiki.db
+result.csv
+elo_backup_*.json
+elo_players_*.csv
+elo_matches_*.csv
+
+# Secrets & Environment variables
+.env
+.env.local
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo

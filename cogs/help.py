@@ -8,7 +8,6 @@ class HelpCog(commands.Cog):
   def __init__(self, bot: commands.Bot):
     self.bot = bot
 
-  # Viết lệnh slash /help bình thường bên trong class
   @app_commands.command(
       name="help", description="Xem danh sách toàn bộ lệnh và cách dùng bot"
   )
@@ -23,20 +22,31 @@ class HelpCog(commands.Cog):
     embed.add_field(
         name="🏆 Hệ Thống Elo",
         value=(
-            "`/elo [tên]` - Xem điểm Elo cá nhân hoặc Bảng xếp hạng"
+            "`/elo [tên]` - Xem điểm Elo cá nhân hoặc Bảng xếp hạng\n"
+            "`/profile [tên]` - Xem hồ sơ chi tiết và tỉ lệ thắng người chơi\n"
+            "`/setname [tên cũ] [tên mới]` - Đổi tên người chơi"
         ),
         inline=False,
     )
 
     embed.add_field(
-        name="Profile",
-        value="`/profile [tên]` - Xem hồ sơ chi tiết và tỉ lệ thắng của người chơi",
+        name="📚 Tra Cứu Wiki & Frame Data",
+        value=(
+            "`/frame [nhân vật] [chiêu thức]` - Tra cứu Frame Data chi tiết của chiêu thức\n"
+            "`/glossary [thuật ngữ]` - Tra cứu định nghĩa thuật ngữ game đối kháng\n"
+            "`/add character [tên]` - Thêm nhân vật mới\n"
+            "`/add move [nhân vật] [tên chiêu]` - Thêm chiêu thức & frame data"
+
+        ),
         inline=False,
     )
 
     embed.add_field(
-        name="Set name",
-        value="`/setname [tên cũ] [tên mới]` - Đổi tên người chơi",
+        name="🎉 Giải Trí",
+        value=(
+            "`/teto` - Gửi GIF Kasane Teto\n"
+            "`/migu` - Gửi GIF Migu"
+        ),
         inline=False,
     )
 
@@ -47,6 +57,5 @@ class HelpCog(commands.Cog):
     await interaction.response.send_message(embed=embed)
 
 
-# Hàm bắt buộc ở cuối file để discord.py nhận diện đây là 1 Cog
 async def setup(bot: commands.Bot):
   await bot.add_cog(HelpCog(bot))

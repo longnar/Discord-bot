@@ -1,0 +1,35 @@
+{
+	"characters": [
+		{
+			"name": "Aki Rosenthal",
+			"display_name": "Aki Rosenthal",
+			"aliases": ["Aki"]
+		}
+	],
+	"moves": [
+		{
+			"character": "Aki Rosenthal",
+			"moves": [
+				{
+					"name": "5L",
+					"aliases": [],
+					"type": "normal",
+					"startup": 5,
+					"active": 2,
+					"recovery": 13,
+					"on_hit": 0,
+					"on_block": -3,
+					"damage": 20,
+					"guard": "Low, Air Unblockable",
+					"adv_on_block": "-3",
+					"adv_on_hit": "0",
+					"invulnerability": "None",
+					"image_url": "",
+					"notes": "Self-Gatling Count: 3. Aki stomps the ground near her.",
+					"frame_notes": ""
+				}
+			]
+		}
+	],
+	"glossary": []
+}
