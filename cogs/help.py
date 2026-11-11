@@ -23,8 +23,12 @@ class HelpCog(commands.Cog):
         name="🏆 Hệ Thống Elo",
         value=(
             "`/elo [tên]` - Xem điểm Elo cá nhân hoặc Bảng xếp hạng\n"
-            "`/profile [tên]` - Xem hồ sơ chi tiết và tỉ lệ thắng người chơi\n"
-            "`/setname [tên cũ] [tên mới]` - Đổi tên người chơi"
+            "`/profile [tên]` - Xem hồ sơ chi tiết và 5 trận gần nhất\n"
+            "`/setname [tên cũ] [tên mới]` - Đổi tên người chơi\n"
+            "`/export_elo` - Xuất dữ liệu Elo (JSON/CSV)\n"
+            "`/elo_manage ...` - Quản lý CRUD Elo & trận đấu *(Admin)*:\n"
+            "  • `add`, `list`, `inspect`, `edit`, `delete`, `reset_player`\n"
+            "  • `match_add`, `match_list`, `match_undo`"
         ),
         inline=False,
     )
