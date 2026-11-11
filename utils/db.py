@@ -1,23 +1,30 @@
+import os
 import sqlite3
 from pathlib import Path
 
+from utils.turso_compat import CompatConnection, is_turso_configured, open_connection
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "wiki.db"
+DB_PATH = Path(os.getenv("WIKI_DB_PATH", str(BASE_DIR / "wiki.db")))
 SCHEMA_PATH = BASE_DIR / "data" / "schema.sql"
 RAW_DATA_DIR = BASE_DIR / "data" / "raw"
 
 
-def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def get_connection() -> CompatConnection:
+    return open_connection(
+        local_path=DB_PATH,
+        url_env="TURSO_WIKI_URL",
+        token_env="TURSO_WIKI_AUTH_TOKEN",
+        row_factory=sqlite3.Row,
+    )
 
 
 def init_db() -> None:
     if not SCHEMA_PATH.exists():
         raise FileNotFoundError(f"Schema file not found: {SCHEMA_PATH}")
 
-    with get_connection() as conn:
+    conn = get_connection()
+    try:
         with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
             conn.executescript(f.read())
 
@@ -46,10 +53,15 @@ def init_db() -> None:
                 except Exception:
                     pass
 
-    print(f"[OK] Wiki database initialized at {DB_PATH}")
+        conn.commit()
+    finally:
+        conn.close()
+
+    mode = "Turso Remote" if is_turso_configured("TURSO_WIKI_URL") else f"Local SQLite ({DB_PATH})"
+    print(f"[OK] Wiki database initialized via {mode}")
 
 
-def fetch_character_id(conn: sqlite3.Connection, character_name: str) -> int | None:
+def fetch_character_id(conn: CompatConnection, character_name: str) -> int | None:
     row = conn.execute(
         "SELECT id FROM characters WHERE LOWER(name) = LOWER(?)",
         (character_name,),
@@ -57,7 +69,7 @@ def fetch_character_id(conn: sqlite3.Connection, character_name: str) -> int | N
     return row["id"] if row else None
 
 
-def fetch_move_by_character(conn: sqlite3.Connection, character_name: str, move_name: str):
+def fetch_move_by_character(conn: CompatConnection, character_name: str, move_name: str):
     query = """
         SELECT m.id, m.name, m.normalized_name, fd.startup, fd.active, fd.recovery,
                fd.damage, fd.guard, fd.adv_on_block, fd.adv_on_hit,

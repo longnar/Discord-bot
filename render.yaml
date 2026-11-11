@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: isdvn-bot
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: python bot.py
+    healthCheckPath: /health
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: SYNC_COMMANDS
+        value: "true"
+      - key: TURSO_ELO_URL
+        sync: false
+      - key: TURSO_ELO_AUTH_TOKEN
+        sync: false
+      - key: TURSO_WIKI_URL
+        sync: false
+      - key: TURSO_WIKI_AUTH_TOKEN
+        sync: false
+
